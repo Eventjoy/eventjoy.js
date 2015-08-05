@@ -182,6 +182,13 @@ var eventjoy = (function () {
 		var headers = {'X-API-Key': _API_KEY};
 		loginRequest.execute('GET', headers, searchParams.join('&'));
 	};
+	ej.events_tickets = function(event_id, complete) {
+		_checkApiKey();
+
+		event_id = event_id||'mine';
+		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id+'/tickets', complete);
+		loginRequest.execute('GET', {'X-API-Key': _API_KEY});
+	};
 	ej.events_orders = function(event_id, complete) {
 		_checkApiKey();
 		_checkAccessToken();
