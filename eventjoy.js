@@ -1,30 +1,27 @@
 /*
+Copyright 2015 Eventjoy
 
-Public Functions:
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-eventjoy.setApiKey
-eventjoy.setAccessToken
-eventjoy.login
-eventjoy.auth
-eventjoy.events_search
-eventjoy.events
-eventjoy.events_orders
-eventjoy.events_attendees
-eventjoy.order
-eventjoy.order_attendees
+    http://www.apache.org/licenses/LICENSE-2.0
 
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 */
 
 var eventjoy = (function () {
-	var ej = {};
-	var _API_KEY = "", _ACCESS_TOKEN = "";
-	var _API_URL = "https://api.eventjoy.com/v1/";
+	var ej = {}, _API_KEY = "", _ACCESS_TOKEN = "", _API_URL = "https://api.eventjoy.com/v1/";
 
-	function _checkApiKey() {
-		if ( !_API_KEY || !_API_KEY.length ) throw "Eventjoy Exception: No API Key provided.";
-	}
-	function _checkAccessToken() {
-		if ( !_ACCESS_TOKEN || !_ACCESS_TOKEN.length ) throw "Eventjoy Exception: No Access Token provided.";
+	function _checkApiKey() { if ( !_API_KEY || !_API_KEY.length ) throw "Eventjoy Exception: No API Key provided."; }
+	function _checkAccessToken() { if ( !_ACCESS_TOKEN || !_ACCESS_TOKEN.length ) throw "Eventjoy Exception: No Access Token provided."; }
+	function _checkCredentials(apikey, access_token) {
+		if ( apikey ) _checkApiKey();
+		if ( access_token ) _checkAccessToken();
 	}
 	function _checkResponse(responseText, responseStatus, responseXML) {
 		if ( 200 == responseStatus ) return true;
@@ -51,7 +48,7 @@ var eventjoy = (function () {
 			}
 		}
 	}
-	function _ajaxRequest(url, callbackFunction) {
+	function _apiRequest(url, callbackFunction) {
 		var that=this;
 		this.updating = false;
 		this.abort = function() {
@@ -63,15 +60,12 @@ var eventjoy = (function () {
 		};
 		this.execute = function(postMethod, headers, queryParams, passData) {
 			if (that.updating) { return false; }
+			_checkCredentials(headers['X-API-Key']?1:0, headers['access_token']?1:0);
 			that.AJAX = null;
-			if (window.XMLHttpRequest) {
-				that.AJAX=new XMLHttpRequest();
-			} else {
-				that.AJAX=new ActiveXObject("Microsoft.XMLHTTP");
-			}
-			if (that.AJAX===null) {
-				return false;
-			} else {
+			if (window.XMLHttpRequest) { that.AJAX=new XMLHttpRequest(); }
+			else { that.AJAX=new ActiveXObject("Microsoft.XMLHTTP"); }
+			if (that.AJAX===null) { return false; }
+			else {
 				that.AJAX.onreadystatechange = function() {
 					if (that.AJAX.readyState==4) {
 						that.updating=false;
@@ -84,11 +78,6 @@ var eventjoy = (function () {
 						} else {
 							if ( that.callback ) that.callback(false);
 						}
-
-						// DEBUGGING
-						//if ( that.AJAX.responseText ) console.log(that.AJAX.responseText);
-						//if ( that.AJAX.status ) console.log(that.AJAX.status);
-						//if ( that.AJAX.responseXML ) console.log(that.AJAX.responseXML);
 
 						that.AJAX=null;
 					}
@@ -116,108 +105,62 @@ var eventjoy = (function () {
 				return true;
 			}
 		};
-		var urlCall = url;
+		var urlCall = _API_URL + url;
 		this.callback = callbackFunction || function () { };
 	}
 	function _onWindowClose(win, onclose) {
-		var w = win;
-		var cb = onclose;
-		var t = setTimeout(function() { _onWindowClose(w, cb); }, 500);
-		var closing = false;
-		try {
-			if (win.closed || win.top === null) //happens when window is closed in FF/Chrome/Safari
-			closing = true;
-		} catch (e) { //happens when window is closed in IE
-			closing = true;
-		}
-		if (closing) {
-			clearTimeout(t);
-			onclose();
-		}
+		var w = win, cb = onclose, closing = false, t = setTimeout(function() { _onWindowClose(w, cb); }, 500);
+		try { if (win.closed || win.top === null) closing = true; } //happens when window is closed in FF/Chrome/Safari
+		catch (e) { closing = true; } //happens when window is closed in IE
+		if (closing) { clearTimeout(t); onclose(); }
 	}
 
-	ej.publicVar = 0;
-	ej.setApiKey = function(API_KEY) {
-		_API_KEY = API_KEY;
-	};
-	ej.setAccessToken = function(ACCESS_TOKEN) {
-		_ACCESS_TOKEN = ACCESS_TOKEN;
-	};
+	// Public functions
+	ej.setApiKey = function(API_KEY) { _API_KEY = API_KEY; };
+	ej.setAccessToken = function(ACCESS_TOKEN) { _ACCESS_TOKEN = ACCESS_TOKEN; };
 	ej.login = function(complete) {
-		_checkApiKey();
-
 		var oauthUrl = 'https://www.eventjoy.com/account/oauth-login?apikey='+_API_KEY;
 		newWin = window.open(oauthUrl, '_blank', 'location=no, width=780, height=600, top='+((screen.height/2)-300)+', left='+((screen.width/2)-390));
-		_onWindowClose( newWin, function() {
-			complete();
-		});
+		_onWindowClose( newWin, function() { complete(); });
 	};
 	ej.auth = function(token, complete) {
-		_checkApiKey();
-
-		var loginRequest = new _ajaxRequest(_API_URL+'oauth/token', function(success, jsonResponse) {
+		(new _apiRequest('oauth/token', function(success, jsonResponse) {
 			if ( jsonResponse && jsonResponse.access_token ) _ACCESS_TOKEN = jsonResponse.access_token;
 			if ( complete ) complete(success, jsonResponse);
-		});
-		loginRequest.execute('POST', {'X-API-Key': _API_KEY, 'X-Request-Token': token}, 'client_id='+encodeURIComponent(_API_KEY)+'&code='+encodeURIComponent(token));
+		})).execute('POST', {'X-API-Key': _API_KEY, 'X-Request-Token': token}, 'client_id='+encodeURIComponent(_API_KEY)+'&code='+encodeURIComponent(token));
 	};
 	ej.events = function(event_id, complete) {
-		_checkApiKey();
-		
-		event_id = event_id||'mine';
-		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id, complete);
 		var headers = {'X-API-Key': _API_KEY};
 		if ( _ACCESS_TOKEN && _ACCESS_TOKEN.length ) headers['access_token'] = _ACCESS_TOKEN;
-		loginRequest.execute('GET', headers);
+		(new _apiRequest('events/'+(event_id||'mine'), complete)).execute('GET', headers, 'include=tickets');
 	};
 	ej.events_search = function(params, complete) {
-		_checkApiKey();
-
-		var searchParams = [];
-		for ( p = 0; p < Object.keys(params); p++ ) {
-			searchParams.push(Object.keys(params)[p]+"="+params[Object.keys(params)[p]]);
-		}
-
-		var loginRequest = new _ajaxRequest(_API_URL+'events/search', complete);
-		var headers = {'X-API-Key': _API_KEY};
-		loginRequest.execute('GET', headers, searchParams.join('&'));
+		var searchParams = ['sort=-created'];
+		for ( p = 0; p < Object.keys(params).length; p++ ) { searchParams.push(Object.keys(params)[p]+"="+params[Object.keys(params)[p]]); }
+		(new _apiRequest('events/search', complete)).execute('GET', {'X-API-Key': _API_KEY}, searchParams.join('&'));
 	};
 	ej.events_tickets = function(event_id, complete) {
-		_checkApiKey();
-
-		event_id = event_id||'mine';
-		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id+'/tickets', complete);
-		loginRequest.execute('GET', {'X-API-Key': _API_KEY});
+		(new _apiRequest('events/'+event_id+'/tickets', complete)).execute('GET', {'X-API-Key': _API_KEY});
 	};
 	ej.events_orders = function(event_id, complete) {
-		_checkApiKey();
-		_checkAccessToken();
-
-		event_id = event_id||'mine';
-		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id+'/orders', complete);
-		loginRequest.execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+		(new _apiRequest('events/'+(event_id||'mine')+'/orders', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
 	};
 	ej.events_attendees = function(event_id, complete) {
-		_checkApiKey();
-		_checkAccessToken();
-
-		event_id = event_id||'mine';
-		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id+'/attendees', complete);
-		loginRequest.execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+		(new _apiRequest('events/'+event_id+'/attendees', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
 	};
 	ej.order = function(order_id, complete) {
-		_checkApiKey();
-		_checkAccessToken();
-
-		var loginRequest = new _ajaxRequest(_API_URL+'orders/'+order_id, complete);
-		loginRequest.execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+		(new _apiRequest('orders/'+order_id, complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
 	};
 	ej.order_attendees = function(order_id, complete) {
-		_checkApiKey();
-		_checkAccessToken();
-
-		var loginRequest = new _ajaxRequest(_API_URL+'orders/'+order_id+'/attendees', complete);
-		loginRequest.execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+		(new _apiRequest('orders/'+order_id+'/attendees', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+	};
+	ej.organizer = function(organizer_id, complete) {
+		var headers = {'X-API-Key': _API_KEY};
+		if ( _ACCESS_TOKEN && _ACCESS_TOKEN.length ) headers['access_token'] = _ACCESS_TOKEN;
+		(new _apiRequest('organizer/'+(organizer_id||'mine'), complete)).execute('GET', headers);
+	};
+	ej.organizer_events = function(organizer_id, complete) {
+		(new _apiRequest('organizer/'+(organizer_id||'mine')+'/events', complete)).execute('GET', {'X-API-Key': _API_KEY});
 	};
 
 	return ej;
