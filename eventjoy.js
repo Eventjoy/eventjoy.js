@@ -8,6 +8,10 @@ eventjoy.login
 eventjoy.auth
 eventjoy.events_search
 eventjoy.events
+eventjoy.events_orders
+eventjoy.events_attendees
+eventjoy.order
+eventjoy.order_attendees
 
 */
 
@@ -71,12 +75,20 @@ var eventjoy = (function () {
 				that.AJAX.onreadystatechange = function() {
 					if (that.AJAX.readyState==4) {
 						that.updating=false;
-						that.callback(that.AJAX.responseText,that.AJAX.status,that.AJAX.responseXML);
+
+						if ( _checkResponse(that.AJAX.responseText,that.AJAX.status,that.AJAX.responseXML) ) {
+							var jsonResponse = null;
+							try { jsonResponse = JSON.parse(that.AJAX.responseText); }
+							catch(e) { jsonResponse = null; }
+							if ( that.callback ) that.callback(true, jsonResponse);
+						} else {
+							if ( that.callback ) that.callback(false);
+						}
 
 						// DEBUGGING
-						if ( that.AJAX.responseText ) console.log(that.AJAX.responseText);
-						if ( that.AJAX.status ) console.log(that.AJAX.status);
-						if ( that.AJAX.responseXML ) console.log(that.AJAX.responseXML);
+						//if ( that.AJAX.responseText ) console.log(that.AJAX.responseText);
+						//if ( that.AJAX.status ) console.log(that.AJAX.status);
+						//if ( that.AJAX.responseXML ) console.log(that.AJAX.responseXML);
 
 						that.AJAX=null;
 					}
@@ -143,49 +155,57 @@ var eventjoy = (function () {
 	ej.auth = function(token, complete) {
 		_checkApiKey();
 
-		var loginRequest = new _ajaxRequest(_API_URL+'oauth/token', function(responseText, responseStatus, responseXML) {
-			if ( _checkResponse(responseText, responseStatus, responseXML) ) {
-				var jsonResponse = null;
-				try { jsonResponse = JSON.parse(responseText); }
-				catch(e) { jsonResponse = null; }
-				if ( jsonResponse && jsonResponse.access_token ) _ACCESS_TOKEN = jsonResponse.access_token;
-				if ( complete ) complete(true, jsonResponse);
-			} else {
-				if ( complete ) complete(false);
-			}
+		var loginRequest = new _ajaxRequest(_API_URL+'oauth/token', function(success, jsonResponse) {
+			if ( jsonResponse && jsonResponse.access_token ) _ACCESS_TOKEN = jsonResponse.access_token;
+			if ( complete ) complete(success, jsonResponse);
 		});
 		loginRequest.execute('POST', {'X-API-Key': _API_KEY, 'X-Request-Token': token}, 'client_id='+encodeURIComponent(_API_KEY)+'&code='+encodeURIComponent(token));
 	};
+	ej.events = function(event_id, complete) {
+		_checkApiKey();
+		
+		event_id = event_id||'mine';
+		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id, complete);
+		var headers = {'X-API-Key': _API_KEY};
+		if ( _ACCESS_TOKEN && _ACCESS_TOKEN.length ) headers['access_token'] = _ACCESS_TOKEN;
+		loginRequest.execute('GET', headers);
+	};
 	ej.events_search = function(name, complete) {
-		var loginRequest = new _ajaxRequest(_API_URL+'events/search', function(responseText, responseStatus, responseXML) {
-			if ( _checkResponse(responseText, responseStatus, responseXML) ) {
-				var jsonResponse = null;
-				try { jsonResponse = JSON.parse(responseText); }
-				catch(e) { jsonResponse = null; }
-				if ( complete ) complete(true, jsonResponse);
-			} else {
-				if ( complete ) complete(false);
-			}
-		});
+		_checkApiKey();
+
+		var loginRequest = new _ajaxRequest(_API_URL+'events/search', complete);
 		var headers = {'X-API-Key': _API_KEY};
 		loginRequest.execute('GET', headers, 'name='+name);
 	};
-	ej.events = function(event_id, complete) {
+	ej.events_orders = function(event_id, complete) {
+		_checkApiKey();
+		_checkAccessToken();
+
 		event_id = event_id||'mine';
-		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id, function(responseText, responseStatus, responseXML) {
-			if ( _checkResponse(responseText, responseStatus, responseXML) ) {
-				var jsonResponse = null;
-				try { jsonResponse = JSON.parse(responseText); }
-				catch(e) { jsonResponse = null; }
-				if ( complete ) complete(true, jsonResponse);
-			} else {
-				if ( complete ) complete(false);
-			}
-		});
-		var headers = {'X-API-Key': _API_KEY};
-		//if ( _ACCESS_TOKEN && _ACCESS_TOKEN.length ) headers['X-Access-Token'] = _ACCESS_TOKEN;
-		if ( _ACCESS_TOKEN && _ACCESS_TOKEN.length ) headers['access_token'] = _ACCESS_TOKEN;
-		loginRequest.execute('GET', headers);
+		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id+'/orders', complete);
+		loginRequest.execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+	};
+	ej.events_attendees = function(event_id, complete) {
+		_checkApiKey();
+		_checkAccessToken();
+
+		event_id = event_id||'mine';
+		var loginRequest = new _ajaxRequest(_API_URL+'events/'+event_id+'/attendees', complete);
+		loginRequest.execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+	};
+	ej.order = function(order_id, complete) {
+		_checkApiKey();
+		_checkAccessToken();
+
+		var loginRequest = new _ajaxRequest(_API_URL+'orders/'+order_id, complete);
+		loginRequest.execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+	};
+	ej.order_attendees = function(order_id, complete) {
+		_checkApiKey();
+		_checkAccessToken();
+
+		var loginRequest = new _ajaxRequest(_API_URL+'orders/'+order_id+'/attendees', complete);
+		loginRequest.execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
 	};
 
 	return ej;
