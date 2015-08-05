@@ -58,7 +58,7 @@ var eventjoy = (function () {
 				that.AJAX=null;
 			}
 		};
-		this.execute = function(postMethod, headers, queryParams, passData) {
+		this.execute = function(postMethod, headers, params, passData) {
 			if (that.updating) { return false; }
 			_checkCredentials(headers['X-API-Key']?1:0, headers['access_token']?1:0);
 			that.AJAX = null;
@@ -82,12 +82,21 @@ var eventjoy = (function () {
 						that.AJAX=null;
 					}
 				};
-
 				that.updating = new Date();
+
+				// Turn param object into array
+				var paramArray = [];
+				if ( params && Object.keys(params).length ) {
+					for ( p = 0; p < Object.keys(params).length; p++ ) { paramArray.push(Object.keys(params)[p]+"="+params[Object.keys(params)[p]]); }
+				}
+				queryParams = paramArray.join('&')
+
+				// Build query URI
 				var uri=urlCall;
 				if ( queryParams && queryParams.length ) uri+='?'+queryParams+'&timestamp='+(that.updating.getTime());
 				else uri+='?timestamp='+(that.updating.getTime());
 
+				// Process GET/POST
 				if (/post/i.test(postMethod||'GET')) {
 					passData = passData||"";
 					that.AJAX.open("POST", uri, true);
@@ -127,36 +136,34 @@ var eventjoy = (function () {
 		(new _apiRequest('oauth/token', function(success, jsonResponse) {
 			if ( jsonResponse && jsonResponse.access_token ) _ACCESS_TOKEN = jsonResponse.access_token;
 			if ( complete ) complete(success, jsonResponse);
-		})).execute('POST', {'X-API-Key': _API_KEY, 'X-Request-Token': token}, 'client_id='+encodeURIComponent(_API_KEY)+'&code='+encodeURIComponent(token));
+		})).execute('POST', {'X-API-Key': _API_KEY, 'X-Request-Token': token}, { 'client_id': encodeURIComponent(_API_KEY), 'code': encodeURIComponent(token) } );
 	};
 	ej.events = function(event_id, complete) {
-		(new _apiRequest('events/'+(event_id||'mine'), complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': event_id?null:_ACCESS_TOKEN}, 'include=tickets');
+		(new _apiRequest('events/'+(event_id||'mine'), complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': event_id?null:_ACCESS_TOKEN}, {'include':'tickets'});
 	};
 	ej.events_search = function(params, complete) {
-		var searchParams = ['sort=-created'];
-		for ( p = 0; p < Object.keys(params).length; p++ ) { searchParams.push(Object.keys(params)[p]+"="+params[Object.keys(params)[p]]); }
-		(new _apiRequest('events/search', complete)).execute('GET', {'X-API-Key': _API_KEY}, searchParams.join('&'));
+		(new _apiRequest('events/search', complete)).execute('GET', {'X-API-Key': _API_KEY}, params);
 	};
-	ej.events_tickets = function(event_id, complete) {
-		(new _apiRequest('events/'+event_id+'/tickets', complete)).execute('GET', {'X-API-Key': _API_KEY});
+	ej.events_tickets = function(event_id, params, complete) {
+		(new _apiRequest('events/'+event_id+'/tickets', complete)).execute('GET', {'X-API-Key': _API_KEY}, params);
 	};
-	ej.events_orders = function(event_id, complete) {
-		(new _apiRequest('events/'+event_id+'/orders', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+	ej.events_orders = function(event_id, params, complete) {
+		(new _apiRequest('events/'+event_id+'/orders', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN}, params);
 	};
-	ej.events_attendees = function(event_id, complete) {
-		(new _apiRequest('events/'+event_id+'/attendees', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+	ej.events_attendees = function(event_id, params, complete) {
+		(new _apiRequest('events/'+event_id+'/attendees', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN}, params);
 	};
 	ej.order = function(order_id, complete) {
 		(new _apiRequest('orders/'+order_id, complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
 	};
-	ej.order_attendees = function(order_id, complete) {
-		(new _apiRequest('orders/'+order_id+'/attendees', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+	ej.order_attendees = function(order_id, params, complete) {
+		(new _apiRequest('orders/'+order_id+'/attendees', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN}, params);
 	};
 	ej.organizer = function(organizer_id, complete) {
 		(new _apiRequest('organizer/'+(organizer_id||'mine'), complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': organizer_id?null:_ACCESS_TOKEN});
 	};
-	ej.organizer_events = function(organizer_id, complete) {
-		(new _apiRequest('organizer/'+(organizer_id||'mine')+'/events', complete)).execute('GET', {'X-API-Key': _API_KEY});
+	ej.organizer_events = function(organizer_id, params, complete) {
+		(new _apiRequest('organizer/'+(organizer_id||'mine')+'/events', complete)).execute('GET', {'X-API-Key': _API_KEY}, params);
 	};
 
 	return ej;
