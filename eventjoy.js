@@ -130,9 +130,7 @@ var eventjoy = (function () {
 		})).execute('POST', {'X-API-Key': _API_KEY, 'X-Request-Token': token}, 'client_id='+encodeURIComponent(_API_KEY)+'&code='+encodeURIComponent(token));
 	};
 	ej.events = function(event_id, complete) {
-		var headers = {'X-API-Key': _API_KEY};
-		if ( _ACCESS_TOKEN && _ACCESS_TOKEN.length ) headers['access_token'] = _ACCESS_TOKEN;
-		(new _apiRequest('events/'+(event_id||'mine'), complete)).execute('GET', headers, 'include=tickets');
+		(new _apiRequest('events/'+(event_id||'mine'), complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': event_id?null:_ACCESS_TOKEN}, 'include=tickets');
 	};
 	ej.events_search = function(params, complete) {
 		var searchParams = ['sort=-created'];
@@ -143,7 +141,7 @@ var eventjoy = (function () {
 		(new _apiRequest('events/'+event_id+'/tickets', complete)).execute('GET', {'X-API-Key': _API_KEY});
 	};
 	ej.events_orders = function(event_id, complete) {
-		(new _apiRequest('events/'+(event_id||'mine')+'/orders', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
+		(new _apiRequest('events/'+event_id+'/orders', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
 	};
 	ej.events_attendees = function(event_id, complete) {
 		(new _apiRequest('events/'+event_id+'/attendees', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
@@ -155,9 +153,7 @@ var eventjoy = (function () {
 		(new _apiRequest('orders/'+order_id+'/attendees', complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': _ACCESS_TOKEN});
 	};
 	ej.organizer = function(organizer_id, complete) {
-		var headers = {'X-API-Key': _API_KEY};
-		if ( _ACCESS_TOKEN && _ACCESS_TOKEN.length ) headers['access_token'] = _ACCESS_TOKEN;
-		(new _apiRequest('organizer/'+(organizer_id||'mine'), complete)).execute('GET', headers);
+		(new _apiRequest('organizer/'+(organizer_id||'mine'), complete)).execute('GET', {'X-API-Key': _API_KEY, 'access_token': organizer_id?null:_ACCESS_TOKEN});
 	};
 	ej.organizer_events = function(organizer_id, complete) {
 		(new _apiRequest('organizer/'+(organizer_id||'mine')+'/events', complete)).execute('GET', {'X-API-Key': _API_KEY});
