@@ -170,12 +170,17 @@ var eventjoy = (function () {
 		if ( _ACCESS_TOKEN && _ACCESS_TOKEN.length ) headers['access_token'] = _ACCESS_TOKEN;
 		loginRequest.execute('GET', headers);
 	};
-	ej.events_search = function(name, complete) {
+	ej.events_search = function(params, complete) {
 		_checkApiKey();
+
+		var searchParams = [];
+		for ( p = 0; p < Object.keys(params); p++ ) {
+			searchParams.push(Object.keys(params)[p]+"="+params[Object.keys(params)[p]]);
+		}
 
 		var loginRequest = new _ajaxRequest(_API_URL+'events/search', complete);
 		var headers = {'X-API-Key': _API_KEY};
-		loginRequest.execute('GET', headers, 'name='+name);
+		loginRequest.execute('GET', headers, searchParams.join('&'));
 	};
 	ej.events_orders = function(event_id, complete) {
 		_checkApiKey();
