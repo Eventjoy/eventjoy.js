@@ -17,6 +17,9 @@ limitations under the License.
 var eventjoy = (function () {
 	var ej = {}, _API_KEY = "", _ACCESS_TOKEN = "", _API_URL = "https://api.eventjoy.com/v1/";
 
+	// Temporarily use a CORS proxy...
+	_API_URL = "http://cors.io/?u=https://api.eventjoy.com/v1/";
+
 	function _checkApiKey() { if ( !_API_KEY || !_API_KEY.length ) throw "Eventjoy Exception: No API Key provided."; }
 	function _checkAccessToken() { if ( !_ACCESS_TOKEN || !_ACCESS_TOKEN.length ) throw "Eventjoy Exception: No Access Token provided."; }
 	function _checkCredentials(apikey, access_token) {
