@@ -101,7 +101,7 @@ var eventjoy = (function () {
 					passData = passData||"";
 					that.AJAX.open("POST", uri, true);
 					that.AJAX.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-					that.AJAX.setRequestHeader("Content-Length", passData.length);
+					/*that.AJAX.setRequestHeader("Content-Length", passData.length);*/
 					that.AJAX.setRequestHeader("X-API-Client", 'eventjoy.js');
 					_addHeaders(that.AJAX, headers);
 					that.AJAX.send(passData);
