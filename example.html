@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Eventjoy.js examplet</title>
+
+		<script type="text/javascript" src="eventjoy.js"></script>
+
+		<style type="text/css">
+			pre {
+				background-color:#000;
+				color:#fff;
+				padding:10px;
+				margin-right:20px;
+				overflow:auto;
+				height:200px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<h1>Eventjoy.js Sample</h1>
+		<hr/>
+
+		<!-- 
+
+			Setting up
+
+		-->
+
+		<script type="text/javascript">
+			// Setup Eventjoy API key
+			eventjoy.setApiKey('<INSERT YOUR API KEY HERE>');
+		</script>
+
+		<!-- 
+
+			Fetching public data without OAuth
+
+		-->
+
+		<h2>Fetching public data (no OAuth required)</h2>
+		<div style="float:left;width:50%">
+			<h3>Public event data</h3>
+			<p><b><code>eventjoy.events_search(params, complete)</code></b></p>
+			<p>Populated when you hit the 'Public Search' button below. No authentication is required.</p>
+			<button id="searchBtn" onclick="fetch_events_public();return false;">Public Search</button>
+			<pre id="searchEventsDiv"></pre>
+		</div>
+		<div style="float:right;width:50%">
+			<h3>Public event tickets</h3>
+			<p><b><code>eventjoy.events_tickets(event_id, params, complete)</code></b></p>
+			<p>Populated when you hit the 'Event Tickets' button below. No authentication is required.</p>
+			<input id="eventTicketsID" placeholder="Enter an Event ID" />
+			<button id="eventTicketsBtn" onclick="fetch_tickets_public();return false;">Get Event Tickets</button>
+			<pre id="eventTicketsDiv"></pre>
+		</div>
+
+		<hr style="clear:both"/>
+
+		<script type="text/javascript">
+			var searchBtn = document.getElementById('searchBtn');
+			var searchEventsDiv = document.getElementById('searchEventsDiv');
+			var eventTicketsID = document.getElementById('eventTicketsID');
+			var eventTicketsBtn = document.getElementById('eventTicketsBtn');
+			var eventTicketsDiv = document.getElementById('eventTicketsDiv');
+
+			function fetch_events_public() {
+				searchEventsDiv.innerHTML = "Searching public events...";
+				eventjoy.events_search({'name': 'party', 'sort': '-created'}, function(success, events) {
+					if ( success && events ) {
+						searchEventsDiv.innerHTML = JSON.stringify(events, null, 2);
+
+						// Once we fetch at least one event, enable fetching of orders for that event
+						if ( events.data.length && events.data[0].ID ) eventTicketsID.value = events.data[0].ID;
+					}
+				});
+			}
+
+			function fetch_tickets_public() {
+				eventTicketsDiv.innerHTML = "Fetching tickets for event_id: "+eventTicketsID.value+"...";
+				eventjoy.events_tickets(eventTicketsID.value, {}, function(success, tickets) {
+					if ( success && tickets ) {
+						eventTicketsDiv.innerHTML = JSON.stringify(tickets, null, 2);
+					}
+				});
+			}
+		</script>
+
+		<!-- 
+
+			Fetching protected data using OAuth
+			
+		-->
+
+		<h2>Fetching private data (OAuth required)</h2>
+		<div style="float:left;width:50%">
+			<h2>Your event data</h2>
+			<p>Can only be populated once successfully authenticated.</p>
+			<button id="loginBtn" onclick="login_go();return false;" style="display:none">Login</button>
+			<button id="fetchEventsBtn" onclick="fetch_events_oauth();return false;" style="display:none">Fetch Events</button>
+			<pre id="fetchEventsDiv"></pre>
+		</div>
+		<div style="float:right;width:50%">
+			<h2>Your event order data</h2>
+			<p>Can only be populated once successfully authenticated, and events have been fetched.</p>
+			<button id="fetchOrdersBtn" onclick="fetch_orders_oauth();return false;" style="display:none">Fetch Orders</button>
+			<pre id="fetchOrdersDiv"></pre>
+		</div>
+
+		<script type="text/javascript">
+			var loginBtn = document.getElementById('loginBtn');
+			var fetchEventsBtn = document.getElementById('fetchEventsBtn');
+			var fetchOrdersBtn = document.getElementById('fetchOrdersBtn');
+			var fetchEventsDiv = document.getElementById('fetchEventsDiv');
+			var fetchOrdersDiv = document.getElementById('fetchOrdersDiv');
+			var event_id_for_orders = 0;
+
+			// Called when we are ready to make authenticated requests to the API
+			function fetch_events_oauth() {
+				fetchEventsDiv.innerHTML = "Fetching events...";
+				fetchEventsBtn.style.display = "none";
+				eventjoy.events(null, {'include':'tickets'}, function(success, events) {
+					if ( success && events ) {
+						fetchEventsDiv.innerHTML = JSON.stringify(events, null, 2);
+
+						// Once we fetch at least one event, enable fetching of orders for that event
+						if ( events.data.length && events.data[0].ID ) {
+							event_id_for_orders = events.data[0].ID;
+							fetchOrdersBtn.style.display = "inline";
+						}
+					}
+				});
+			}
+
+			function fetch_orders_oauth() {
+				fetchOrdersDiv.innerHTML = "Fetching orders for event_id: "+event_id_for_orders+"...";
+				fetchOrdersBtn.style.display = "none";
+				eventjoy.events_orders(event_id_for_orders, {}, function(success, orders) {
+					if ( success && orders ) {
+						fetchOrdersDiv.innerHTML = JSON.stringify(orders, null, 2);
+					}
+				});
+			}
+
+			function login_go() {
+				eventjoy.login(function(success) {
+					// Enable fetching of oauth-only data
+					fetchEventsBtn.style.display = "inline";
+				});
+			}
+
+			// Do we already have an access token?
+			if ( localStorage.getItem( 'eventjoy_access_token' ) ) {
+				// We aleady have an access token
+				eventjoy.setAccessToken( localStorage.getItem('eventjoy_access_token') );
+				fetchEventsBtn.style.display = "inline";
+			} else if ( localStorage.getItem( 'eventjoy_oauth_token' ) ) {
+				// No, but we we do have a oauth request token
+				eventjoy.auth( localStorage.getItem('eventjoy_oauth_token'), function(success, response) {
+					localStorage.setItem( 'eventjoy_access_token', response.access_token);
+					fetchEventsBtn.style.display = "inline";
+				});
+			} else {
+				// No, so we need to handle login
+				loginBtn.style.display = "inline";
+			}
+		</script>
+	</body>
+</html>
